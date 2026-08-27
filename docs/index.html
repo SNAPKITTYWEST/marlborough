@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MARLBOROUGH — Heartbeat Esolang</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #030308;
+  --card: rgba(8,8,16,0.95);
+  --red: #FF3B5C;
+  --red-dim: rgba(255,59,92,0.15);
+  --red-glow: rgba(255,59,92,0.4);
+  --gold: #D4AF37;
+  --green: #4ADE80;
+  --text: #E4E4E7;
+  --dim: #52525B;
+  --border: rgba(255,59,92,0.1);
+  --font: 'JetBrains Mono', monospace;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40px 20px;
+}
+
+/* HEADER */
+.header {
+  text-align: center;
+  margin-bottom: 40px;
+}
+.header h1 {
+  font-size: 48px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  color: var(--red);
+  text-shadow: 0 0 40px var(--red-glow);
+  margin-bottom: 8px;
+}
+.header .sub {
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  color: var(--dim);
+  text-transform: uppercase;
+}
+.header .desc {
+  font-size: 12px;
+  color: var(--dim);
+  margin-top: 12px;
+  max-width: 600px;
+  line-height: 1.6;
+}
+.header .desc span { color: var(--text); }
+
+/* HEART CONTAINER */
+.heart-container {
+  position: relative;
+  width: 100%;
+  max-width: 800px;
+  margin-bottom: 32px;
+}
+
+/* ECG CANVAS */
+#ecg-canvas {
+  width: 100%;
+  height: 200px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  display: block;
+}
+
+/* PULSE INDICATOR */
+.pulse-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 16px;
+}
+.pulse-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--red);
+  box-shadow: 0 0 0 0 var(--red-glow);
+  animation: pulse-beat 1s ease infinite;
+  flex-shrink: 0;
+}
+@keyframes pulse-beat {
+  0%   { box-shadow: 0 0 0 0 rgba(255,59,92,0.6); }
+  70%  { box-shadow: 0 0 0 12px rgba(255,59,92,0); }
+  100% { box-shadow: 0 0 0 0 rgba(255,59,92,0); }
+}
+.bpm-display {
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--red);
+  letter-spacing: -0.02em;
+}
+.bpm-label {
+  font-size: 10px;
+  color: var(--dim);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+
+/* STATS ROW */
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  width: 100%;
+  max-width: 800px;
+  margin-bottom: 32px;
+}
+.stat {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  text-align: center;
+}
+.stat .val {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+.stat .lbl {
+  font-size: 9px;
+  color: var(--dim);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.stat.red .val { color: var(--red); }
+.stat.gold .val { color: var(--gold); }
+.stat.green .val { color: var(--green); }
+
+/* TWO COLUMN LAYOUT */
+.two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  width: 100%;
+  max-width: 800px;
+  margin-bottom: 32px;
+}
+.panel {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px;
+}
+.panel h3 {
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  color: var(--dim);
+  text-transform: uppercase;
+  margin-bottom: 14px;
+}
+
+/* PROGRAM TAPE */
+#program-tape {
+  height: 200px;
+  overflow-y: auto;
+  font-size: 10px;
+  line-height: 1.8;
+  color: var(--dim);
+}
+#program-tape .line { display: flex; gap: 8px; }
+#program-tape .line.active { color: var(--red); background: var(--red-dim); }
+#program-tape .line.out { color: var(--green); }
+#program-tape .linenum { width: 30px; text-align: right; color: var(--dim); flex-shrink: 0; }
+#program-tape .op { color: var(--text); }
+#program-tape .arg { color: var(--gold); }
+
+/* INSTRUCTION GRAPH */
+#flow-canvas {
+  width: 100%;
+  height: 200px;
+  display: block;
+}
+
+/* FOOTER */
+.footer {
+  font-size: 9px;
+  color: var(--dim);
+  text-align: center;
+  letter-spacing: 0.1em;
+  margin-top: 20px;
+}
+
+/* CONTROLS */
+.controls {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+.btn {
+  padding: 10px 20px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn:hover { border-color: var(--red); color: var(--red); }
+.btn.active { background: var(--red); color: #000; border-color: var(--red); }
+
+@media (max-width: 600px) {
+  .stats-row { grid-template-columns: repeat(2, 1fr); }
+  .two-col { grid-template-columns: 1fr; }
+  .header h1 { font-size: 32px; }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>MARLBOROUGH</h1>
+  <div class="sub">Esoteric Programming Language · Ahmad Ali Parr · 2026</div>
+  <p class="desc">
+    Four instructions: <span>IN · OUT · BR · GOTO</span>.<br>
+    The heartbeat is not computed — it is the <span>topology of the control flow graph</span>.<br>
+    250 lines. No arithmetic. No variables. Just structure becoming rhythm.
+  </p>
+</div>
+
+<div class="controls">
+  <button class="btn active" id="btn-run">Running</button>
+  <button class="btn" id="btn-pause">Pause</button>
+  <button class="btn" id="btn-step">Step</button>
+  <button class="btn" id="btn-reset">Reset</button>
+</div>
+
+<div class="heart-container">
+  <canvas id="ecg-canvas"></canvas>
+  <div class="pulse-row" style="margin-top:16px;">
+    <div class="pulse-dot" id="pulse-dot"></div>
+    <div>
+      <div class="bpm-display" id="bpm">72</div>
+      <div class="bpm-label">PC Oscillations / min</div>
+    </div>
+  </div>
+</div>
+
+<div class="stats-row">
+  <div class="stat red">
+    <div class="val" id="stat-pc">1</div>
+    <div class="lbl">Program Counter</div>
+  </div>
+  <div class="stat">
+    <div class="val" id="stat-steps">0</div>
+    <div class="lbl">Steps Executed</div>
+  </div>
+  <div class="stat gold">
+    <div class="val" id="stat-out">0</div>
+    <div class="lbl">OUT Value</div>
+  </div>
+  <div class="stat green">
+    <div class="val" id="stat-ops">0</div>
+    <div class="lbl">Outputs Total</div>
+  </div>
+</div>
+
+<div class="two-col">
+  <div class="panel">
+    <h3>Program Tape</h3>
+    <div id="program-tape"></div>
+  </div>
+  <div class="panel">
+    <h3>Control Flow Graph — GOTO / BR</h3>
+    <canvas id="flow-canvas"></canvas>
+  </div>
+</div>
+
+<div class="footer">
+  MARLBOROUGH · Bel Esprit D'Accord Irrevocable Trust · EIN 42-697643<br>
+  "The algorithm IS the control flow. The heartbeat is the shape of the GOTO graph."
+</div>
+
+<script>
+// ─────────────────────────────────────────────
+// MARLBOROUGH INTERPRETER
+// ─────────────────────────────────────────────
+const PROGRAM_SOURCE = `1 IN
+2 OUT
+3 BR 10
+4 GOTO 2
+5 IN
+6 OUT
+7 BR 12
+8 GOTO 5
+9 IN
+10 OUT
+11 BR 14
+12 GOTO 9
+13 IN
+14 OUT
+15 BR 16
+16 GOTO 13
+17 IN
+18 OUT
+19 BR 18
+20 GOTO 17
+21 IN
+22 OUT
+23 BR 20
+24 GOTO 21
+25 IN
+26 OUT
+27 BR 22
+28 GOTO 25
+29 IN
+30 OUT
+31 BR 24
+32 GOTO 29
+33 IN
+34 OUT
+35 BR 26
+36 GOTO 33
+37 IN
+38 OUT
+39 BR 28
+40 GOTO 37
+41 IN
+42 OUT
+43 BR 30
+44 GOTO 41
+45 IN
+46 OUT
+47 BR 32
+48 GOTO 45
+49 IN
+50 OUT
+51 BR 34
+52 GOTO 49
+53 IN
+54 OUT
+55 BR 36
+56 GOTO 53
+57 IN
+58 OUT
+59 BR 38
+60 GOTO 57
+61 IN
+62 OUT
+63 BR 40
+64 GOTO 61
+65 IN
+66 OUT
+67 BR 42
+68 GOTO 65
+69 IN
+70 OUT
+71 BR 44
+72 GOTO 69
+73 IN
+74 OUT
+75 BR 46
+76 GOTO 73
+77 IN
+78 OUT
+79 BR 48
+80 GOTO 77
+81 IN
+82 OUT
+83 BR 50
+84 GOTO 81
+85 IN
+86 OUT
+87 BR 52
+88 GOTO 85
+89 IN
+90 OUT
+91 BR 54
+92 GOTO 89
+93 IN
+94 OUT
+95 BR 56
+96 GOTO 93
+97 IN
+98 OUT
+99 BR 58
+100 GOTO 97
+101 IN
+102 OUT
+103 BR 60
+104 GOTO 101
+105 IN
+106 OUT
+107 BR 62
+108 GOTO 105
+109 IN
+110 OUT
+111 BR 64
+112 GOTO 109
+113 IN
+114 OUT
+115 BR 66
+116 GOTO 113
+117 IN
+118 OUT
+119 BR 68
+120 GOTO 117
+121 IN
+122 OUT
+123 BR 70
+124 GOTO 121
+125 IN
+126 OUT
+127 BR 72
+128 GOTO 125
+129 IN
+130 OUT
+131 BR 74
+132 GOTO 129
+133 IN
+134 OUT
+135 BR 76
+136 GOTO 133
+137 IN
+138 OUT
+139 BR 78
+140 GOTO 137
+141 IN
+142 OUT
+143 BR 80
+144 GOTO 141
+145 IN
+146 OUT
+147 BR 82
+148 GOTO 145
+149 IN
+150 OUT
+151 BR 84
+152 GOTO 149
+153 IN
+154 OUT
+155 BR 86
+156 GOTO 153
+157 IN
+158 OUT
+159 BR 88
+160 GOTO 157
+161 IN
+162 OUT
+163 BR 90
+164 GOTO 161
+165 IN
+166 OUT
+167 BR 92
+168 GOTO 165
+169 IN
+170 OUT
+171 BR 94
+172 GOTO 169
+173 IN
+174 OUT
+175 BR 96
+176 GOTO 173
+177 IN
+178 OUT
+179 BR 98
+180 GOTO 177
+181 IN
+182 OUT
+183 BR 100
+184 GOTO 181
+185 IN
+186 OUT
+187 BR 102
+188 GOTO 185
+189 IN
+190 OUT
+191 BR 104
+192 GOTO 189
+193 IN
+194 OUT
+195 BR 106
+196 GOTO 193
+197 IN
+198 OUT
+199 BR 108
+200 GOTO 197
+201 IN
+202 OUT
+203 BR 110
+204 GOTO 201
+205 IN
+206 OUT
+207 BR 112
+208 GOTO 205
+209 IN
+210 OUT
+211 BR 114
+212 GOTO 209
+213 IN
+214 OUT
+215 BR 116
+216 GOTO 213
+217 IN
+218 OUT
+219 BR 118
+220 GOTO 217
+221 IN
+222 OUT
+223 BR 120
+224 GOTO 221
+225 IN
+226 OUT
+227 BR 122
+228 GOTO 225
+229 IN
+230 OUT
+231 BR 124
+232 GOTO 229
+233 IN
+234 OUT
+235 BR 126
+236 GOTO 233
+237 IN
+238 OUT
+239 BR 128
+240 GOTO 237
+241 IN
+242 OUT
+243 BR 130
+244 GOTO 241
+245 IN
+246 OUT
+247 BR 132
+248 GOTO 245
+249 IN
+250 OUT`;
+
+function parseProgram(src) {
+  const instrs = {};
+  src.trim().split('\n').forEach(line => {
+    const p = line.trim().split(/\s+/);
+    if (p.length < 2) return;
+    const n = parseInt(p[0]);
+    instrs[n] = { op: p[1], arg: p[2] ? parseInt(p[2]) : null, line: n };
+  });
+  return instrs;
+}
+
+class VM {
+  constructor() {
+    this.instrs = parseProgram(PROGRAM_SOURCE);
+    this.reset();
+  }
+  reset() {
+    this.pc = 1;
+    this.lastIn = 0;
+    this.outputs = [];
+    this.steps = 0;
+    this.inputClock = 0;
+  }
+  step() {
+    const instr = this.instrs[this.pc];
+    if (!instr) { this.pc = 1; return null; }
+    this.steps++;
+    let outVal = null;
+    switch (instr.op) {
+      case 'IN': {
+        // Triangle wave: creates breathing input
+        const t = this.inputClock++;
+        const phase = t % 250;
+        this.lastIn = phase < 125 ? phase : 250 - phase;
+        this.pc++;
+        break;
+      }
+      case 'OUT': {
+        outVal = this.lastIn;
+        this.outputs.push(outVal);
+        this.pc++;
+        break;
+      }
+      case 'BR': {
+        if (this.lastIn > 60) {
+          this.pc = instr.arg;
+        } else {
+          this.pc++;
+        }
+        break;
+      }
+      case 'GOTO': {
+        this.pc = instr.arg;
+        break;
+      }
+      default:
+        this.pc++;
+    }
+    return { pc: this.pc, out: outVal, instr };
+  }
+}
+
+// ─────────────────────────────────────────────
+// RENDER
+// ─────────────────────────────────────────────
+const vm = new VM();
+const ecgCanvas = document.getElementById('ecg-canvas');
+const ecgCtx = ecgCanvas.getContext('2d');
+const flowCanvas = document.getElementById('flow-canvas');
+const flowCtx = flowCanvas.getContext('2d');
+
+let running = true;
+let ecgPoints = [];
+let pcHistory = [];
+let totalOuts = 0;
+let bpmCounter = 0;
+let lastBpmTime = Date.now();
+let bpmValue = 72;
+const MAX_ECG = 300;
+
+function resizeCanvases() {
+  const cw = ecgCanvas.parentElement.clientWidth;
+  ecgCanvas.width = cw;
+  ecgCanvas.height = 200;
+  flowCanvas.width = flowCanvas.parentElement.clientWidth - 40;
+  flowCanvas.height = 200;
+}
+resizeCanvases();
+window.addEventListener('resize', resizeCanvases);
+
+function drawECG() {
+  const w = ecgCanvas.width, h = ecgCanvas.height;
+  ecgCtx.fillStyle = 'rgba(3,3,8,0.3)';
+  ecgCtx.fillRect(0, 0, w, h);
+
+  // Grid
+  ecgCtx.strokeStyle = 'rgba(255,59,92,0.05)';
+  ecgCtx.lineWidth = 1;
+  for (let x = 0; x < w; x += 40) {
+    ecgCtx.beginPath(); ecgCtx.moveTo(x, 0); ecgCtx.lineTo(x, h); ecgCtx.stroke();
+  }
+  for (let y = 0; y < h; y += 40) {
+    ecgCtx.beginPath(); ecgCtx.moveTo(0, y); ecgCtx.lineTo(w, y); ecgCtx.stroke();
+  }
+
+  if (ecgPoints.length < 2) return;
+
+  // Glow
+  ecgCtx.shadowBlur = 12;
+  ecgCtx.shadowColor = '#FF3B5C';
+  ecgCtx.strokeStyle = '#FF3B5C';
+  ecgCtx.lineWidth = 2;
+  ecgCtx.beginPath();
+  const step = w / MAX_ECG;
+  ecgPoints.forEach((v, i) => {
+    const x = i * step;
+    const y = h - (v / 130) * (h - 20) - 10;
+    i === 0 ? ecgCtx.moveTo(x, y) : ecgCtx.lineTo(x, y);
+  });
+  ecgCtx.stroke();
+  ecgCtx.shadowBlur = 0;
+
+  // Leading dot
+  if (ecgPoints.length > 0) {
+    const last = ecgPoints[ecgPoints.length - 1];
+    const x = (ecgPoints.length - 1) * step;
+    const y = h - (last / 130) * (h - 20) - 10;
+    ecgCtx.fillStyle = '#FF3B5C';
+    ecgCtx.shadowBlur = 20;
+    ecgCtx.shadowColor = '#FF3B5C';
+    ecgCtx.beginPath();
+    ecgCtx.arc(x, y, 3, 0, Math.PI * 2);
+    ecgCtx.fill();
+    ecgCtx.shadowBlur = 0;
+  }
+}
+
+function drawFlowGraph() {
+  const w = flowCanvas.width, h = flowCanvas.height;
+  flowCtx.clearRect(0, 0, w, h);
+
+  // Show PC movement as bouncing ball on program tape
+  const totalLines = 250;
+  const xScale = w / totalLines;
+  const cy = h / 2;
+
+  // Draw tape line
+  flowCtx.strokeStyle = 'rgba(255,59,92,0.2)';
+  flowCtx.lineWidth = 1;
+  flowCtx.beginPath();
+  flowCtx.moveTo(0, cy); flowCtx.lineTo(w, cy);
+  flowCtx.stroke();
+
+  // Draw PC history trail
+  if (pcHistory.length > 1) {
+    flowCtx.strokeStyle = 'rgba(255,59,92,0.3)';
+    flowCtx.lineWidth = 1;
+    flowCtx.beginPath();
+    pcHistory.forEach((pc, i) => {
+      const x = (pc / totalLines) * w;
+      const y = cy + Math.sin(i * 0.3) * 30;
+      i === 0 ? flowCtx.moveTo(x, y) : flowCtx.lineTo(x, y);
+    });
+    flowCtx.stroke();
+  }
+
+  // Current PC ball
+  const curX = (vm.pc / totalLines) * w;
+  flowCtx.fillStyle = '#FF3B5C';
+  flowCtx.shadowBlur = 20;
+  flowCtx.shadowColor = '#FF3B5C';
+  flowCtx.beginPath();
+  flowCtx.arc(curX, cy, 5, 0, Math.PI * 2);
+  flowCtx.fill();
+  flowCtx.shadowBlur = 0;
+
+  // Label
+  flowCtx.fillStyle = 'rgba(255,59,92,0.5)';
+  flowCtx.font = '9px JetBrains Mono';
+  flowCtx.fillText('PC = ' + vm.pc, curX + 8, cy - 8);
+}
+
+function buildTape() {
+  const tape = document.getElementById('program-tape');
+  const lines = PROGRAM_SOURCE.trim().split('\n');
+  tape.innerHTML = lines.map(l => {
+    const p = l.trim().split(/\s+/);
+    const n = p[0], op = p[1], arg = p[2] || '';
+    return `<div class="line" id="ln-${n}">
+      <span class="linenum">${n}</span>
+      <span class="op">${op}</span>
+      <span class="arg">${arg}</span>
+    </div>`;
+  }).join('');
+}
+buildTape();
+
+let lastActiveLine = null;
+function highlightLine(n) {
+  if (lastActiveLine) {
+    const el = document.getElementById('ln-' + lastActiveLine);
+    if (el) el.classList.remove('active');
+  }
+  const el = document.getElementById('ln-' + n);
+  if (el) {
+    el.classList.add('active');
+    el.scrollIntoView({ block: 'nearest' });
+    lastActiveLine = n;
+  }
+}
+
+// BPM calculation
+let outCount = 0;
+let lastOutTime = Date.now();
+let bpmSmooth = 72;
+
+function tick() {
+  if (!running) return;
+
+  // Run several steps per frame
+  for (let i = 0; i < 8; i++) {
+    const result = vm.step();
+    if (result && result.out !== null) {
+      ecgPoints.push(result.out);
+      if (ecgPoints.length > MAX_ECG) ecgPoints.shift();
+      totalOuts++;
+      outCount++;
+
+      // Detect peaks for BPM
+      const now = Date.now();
+      if (outCount % 20 === 0) {
+        const elapsed = (now - lastOutTime) / 1000;
+        if (elapsed > 0) {
+          const rawBpm = (20 / elapsed) * 60;
+          bpmSmooth = bpmSmooth * 0.8 + rawBpm * 0.2;
+          lastOutTime = now;
+        }
+      }
+    }
+    if (result) {
+      pcHistory.push(result.pc || vm.pc);
+      if (pcHistory.length > 60) pcHistory.shift();
+    }
+  }
+
+  // Update stats
+  document.getElementById('stat-pc').textContent = vm.pc;
+  document.getElementById('stat-steps').textContent = vm.steps.toLocaleString();
+  document.getElementById('stat-out').textContent = ecgPoints[ecgPoints.length-1]?.toFixed(0) ?? '0';
+  document.getElementById('stat-ops').textContent = totalOuts.toLocaleString();
+  document.getElementById('bpm').textContent = Math.round(bpmSmooth);
+
+  highlightLine(vm.pc);
+  drawECG();
+  drawFlowGraph();
+
+  requestAnimationFrame(tick);
+}
+
+// Controls
+document.getElementById('btn-run').addEventListener('click', () => {
+  running = true;
+  document.getElementById('btn-run').classList.add('active');
+  document.getElementById('btn-pause').classList.remove('active');
+  tick();
+});
+document.getElementById('btn-pause').addEventListener('click', () => {
+  running = false;
+  document.getElementById('btn-pause').classList.add('active');
+  document.getElementById('btn-run').classList.remove('active');
+});
+document.getElementById('btn-step').addEventListener('click', () => {
+  running = false;
+  document.getElementById('btn-pause').classList.add('active');
+  document.getElementById('btn-run').classList.remove('active');
+  const result = vm.step();
+  if (result?.out !== null && result.out !== undefined) {
+    ecgPoints.push(result.out);
+    if (ecgPoints.length > MAX_ECG) ecgPoints.shift();
+    totalOuts++;
+  }
+  document.getElementById('stat-pc').textContent = vm.pc;
+  document.getElementById('stat-steps').textContent = vm.steps;
+  document.getElementById('stat-out').textContent = ecgPoints[ecgPoints.length-1]?.toFixed(0) ?? '0';
+  document.getElementById('stat-ops').textContent = totalOuts;
+  highlightLine(vm.pc);
+  drawECG();
+  drawFlowGraph();
+});
+document.getElementById('btn-reset').addEventListener('click', () => {
+  vm.reset();
+  ecgPoints = [];
+  pcHistory = [];
+  totalOuts = 0;
+  outCount = 0;
+  bpmSmooth = 72;
+  document.getElementById('program-tape').querySelectorAll('.line').forEach(el => el.classList.remove('active'));
+  drawECG();
+  drawFlowGraph();
+});
+
+// Start
+tick();
+</script>
+</body>
+</html>
