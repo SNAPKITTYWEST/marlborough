@@ -753,7 +753,14 @@ function highlightLine(n) {
   const el = document.getElementById('ln-' + n);
   if (el) {
     el.classList.add('active');
-    el.scrollIntoView({ block: 'nearest' });
+    // Scroll only within the tape container — never hijack page scroll
+    const tape = document.getElementById('program-tape');
+    const elTop = el.offsetTop;
+    const tapeScrollTop = tape.scrollTop;
+    const tapeHeight = tape.clientHeight;
+    if (elTop < tapeScrollTop || elTop > tapeScrollTop + tapeHeight - 20) {
+      tape.scrollTop = elTop - tapeHeight / 2;
+    }
     lastActiveLine = n;
   }
 }
